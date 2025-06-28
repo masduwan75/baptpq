@@ -1,0 +1,685 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Upload BAP EMIS TPQ</title> <!-- Updated Title -->
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <!-- SheetJS for Excel Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        /* Custom styles */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8; /* Softer background color */
+        }
+        /* Custom modal styles */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+        }
+        .modal-backdrop.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 2.5rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            transform: scale(0.95);
+            transition: transform 0.3s ease;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+        }
+        .modal-backdrop.active .modal-content {
+            transform: scale(1);
+        }
+        /* Spinner animation for refresh button */
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+    </style>
+</head>
+<body class="antialiased text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+        <!-- Header -->
+        <header class="text-center mb-8 md:mb-12">
+            <h1 class="text-3xl md:text-4xl font-bold text-gray-800">Aplikasi Upload BAP EMIS TPQ</h1> <!-- Updated Header Title -->
+            <p class="text-gray-500 mt-2">Sistem Pengelolaan Data Santri, Guru, dan Berkas EMIS Modern</p>
+        </header>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <!-- Form Section -->
+            <div class="lg:col-span-5">
+                <div class="bg-white p-6 rounded-2xl shadow-lg">
+                    <h2 class="text-2xl font-semibold mb-6 text-gray-700 border-b pb-4">Form Upload Data</h2>
+                    <form id="emisForm" class="space-y-6">
+                        <div>
+                            <label for="lembagaName" class="block text-sm font-medium text-gray-600 mb-1">Nama Lembaga TPQ</label>
+                            <input type="text" id="lembagaName" name="lembagaName" class="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" required>
+                        </div>
+
+                        <div>
+                            <label for="tahunSemester" class="block text-sm font-medium text-gray-600 mb-1">Tahun/Semester</label>
+                            <select id="tahunSemester" name="tahunSemester" class="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" required>
+                                <option value="">Pilih Periode</option>
+                                <!-- Options will be dynamically populated by JS -->
+                            </select>
+                        </div>
+
+                        <!-- Data Santri -->
+                        <div class="p-4 border border-gray-200 rounded-lg">
+                            <p class="font-semibold text-gray-700 mb-3">Jumlah Santri</p> <!-- Updated text -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="santriLaki" class="block text-sm font-medium text-gray-600 mb-1">Laki-laki</label>
+                                    <input type="number" id="santriLaki" name="santriLaki" min="0" class="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" required>
+                                </div>
+                                <div>
+                                    <label for="santriPerempuan" class="block text-sm font-medium text-gray-600 mb-1">Perempuan</label>
+                                    <input type="number" id="santriPerempuan" name="santriPerempuan" min="0" class="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" required>
+                                </div>
+                            </div>
+                            <div class="mt-4">
+                                <label for="totalSantri" class="block text-sm font-medium text-gray-600 mb-1">Total Santri</label>
+                                <input type="number" id="totalSantri" name="totalSantri" class="w-full px-4 py-2 bg-gray-200 border border-gray-300 rounded-lg cursor-not-allowed" readonly>
+                            </div>
+                        </div>
+
+                        <!-- Data Guru -->
+                        <div class="p-4 border border-gray-200 rounded-lg">
+                            <p class="font-semibold text-gray-700 mb-3">Jumlah Guru</p> <!-- Updated text -->
+                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label for="guruLaki" class="block text-sm font-medium text-gray-600 mb-1">Laki-laki</label>
+                                    <input type="number" id="guruLaki" name="guruLaki" min="0" class="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" required>
+                                </div>
+                                <div>
+                                    <label for="guruPerempuan" class="block text-sm font-medium text-gray-600 mb-1">Perempuan</label>
+                                    <input type="number" id="guruPerempuan" name="guruPerempuan" min="0" class="w-full px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" required>
+                                </div>
+                            </div>
+                            <div class="mt-4">
+                                <label for="totalGuru" class="block text-sm font-medium text-gray-600 mb-1">Total Guru</label>
+                                <input type="number" id="totalGuru" name="totalGuru" class="w-full px-4 py-2 bg-gray-200 border border-gray-300 rounded-lg cursor-not-allowed" readonly>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-600 mb-1">Upload Berkas EMIS</label>
+                            <label for="berkasEmis" class="w-full flex items-center justify-center px-4 py-4 bg-gray-50 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-100 hover:border-blue-500 transition">
+                                <div class="text-center">
+                                    <i class="fas fa-cloud-upload-alt fa-2x text-gray-400"></i>
+                                    <p id="fileUploadText" class="mt-2 text-sm text-gray-500">
+                                        <span class="font-semibold text-blue-600">Klik untuk upload</span>
+                                    </p>
+                                    <p id="fileNameDisplay" class="text-xs text-gray-500 mt-1"></p>
+                                </div>
+                            </label>
+                            <input type="file" id="berkasEmis" name="berkasEmis" class="hidden" accept=".pdf,.doc,.docx,.xls,.xlsx" required>
+                            <p class="text-xs text-gray-400 mt-1 text-center">Format: PDF, DOC, XLS (Maks. 5MB)</p>
+                        </div>
+                        
+                        <div class="!mt-8 flex items-center space-x-4">
+                            <button type="submit" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-transform transform hover:scale-105">
+                                <i class="fas fa-save mr-2"></i> Simpan Data
+                            </button>
+                             <button type="reset" id="resetBtnForm" class="w-full bg-gray-200 text-gray-700 font-bold py-3 px-4 rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400 transition">
+                                <i class="fas fa-undo mr-2"></i> Reset
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Data Display Section -->
+            <div class="lg:col-span-7">
+                <div class="mb-6 flex flex-wrap justify-between items-center gap-4">
+                    <h2 class="text-2xl font-semibold text-gray-700">Data EMIS Tersimpan</h2>
+                    <div class="flex items-center space-x-2">
+                        <button id="refreshBtn" class="bg-white text-gray-600 px-4 py-2 rounded-lg shadow hover:bg-gray-50 transition"><i class="fas fa-sync-alt mr-2"></i>Refresh</button>
+                        <button id="downloadBtn" class="bg-green-600 text-white px-3 py-2 text-sm rounded-lg shadow hover:bg-green-700 transition"><i class="fas fa-file-excel mr-2"></i>Download Data Excel</button>
+                    </div>
+                </div>
+
+                <!-- Statistics - Enhanced Section -->
+                <div id="statistikContainer" class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <!-- Jumlah Lembaga Card -->
+                    <div class="bg-white p-5 rounded-xl shadow-md flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-500">Jumlah Lembaga</p>
+                            <p id="totalLembagaDisplay" class="text-4xl font-bold text-purple-600 mt-1">0</p>
+                        </div>
+                        <i class="fas fa-school text-purple-400 text-3xl opacity-70"></i>
+                    </div>
+
+                    <!-- Total Santri Card -->
+                    <div class="bg-white p-5 rounded-xl shadow-md flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-500">Total Santri</p>
+                            <p id="totalSantriOverallDisplay" class="text-4xl font-bold text-blue-600 mt-1">0</p>
+                        </div>
+                        <i class="fas fa-users text-blue-400 text-3xl opacity-70"></i>
+                    </div>
+
+                    <!-- Total Guru Card -->
+                    <div class="bg-white p-5 rounded-xl shadow-md flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-500">Total Guru</p>
+                            <p id="totalGuruOverallDisplay" class="text-4xl font-bold text-orange-600 mt-1">0</p>
+                        </div>
+                        <i class="fas fa-chalkboard-teacher text-orange-400 text-3xl opacity-70"></i>
+                    </div>
+                </div>
+                <!-- Original statistikText removed as it's replaced by the cards -->
+
+                <!-- Data Cards -->
+                <div id="data-container" class="space-y-4">
+                    <!-- Cards will be injected here by JavaScript -->
+                </div>
+                   <div id="no-data" class="hidden text-center py-16">
+                    <i class="fas fa-folder-open fa-4x text-gray-300 mb-4"></i>
+                    <h3 class="text-xl font-semibold text-gray-500">Belum Ada Data</h3>
+                    <p class="text-gray-400">Silakan isi form di samping untuk menambahkan data baru.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom Modal -->
+    <div id="customModal" class="modal-backdrop">
+        <div class="modal-content">
+            <h3 id="modalTitle" class="text-2xl font-bold text-gray-800 mb-4"></h3>
+            <p id="modalMessage" class="text-gray-600 mb-8"></p>
+            <div id="modalActions" class="flex justify-center gap-4">
+                <!-- Modal buttons will be injected here -->
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // State Management
+            let emisData = JSON.parse(localStorage.getItem('emisData')) || [];
+            let currentId = emisData.length > 0 ? Math.max(...emisData.map(item => item.id)) + 1 : 1;
+
+            // DOM Elements
+            const emisForm = document.getElementById('emisForm');
+            const santriLaki = document.getElementById('santriLaki');
+            const santriPerempuan = document.getElementById('santriPerempuan');
+            const totalSantri = document.getElementById('totalSantri');
+            const guruLaki = document.getElementById('guruLaki');
+            const guruPerempuan = document.getElementById('guruPerempuan');
+            const totalGuru = document.getElementById('totalGuru');
+            const dataContainer = document.getElementById('data-container');
+            const noDataPlaceholder = document.getElementById('no-data');
+            
+            // New statistics display elements
+            const totalLembagaDisplay = document.getElementById('totalLembagaDisplay');
+            const totalSantriOverallDisplay = document.getElementById('totalSantriOverallDisplay');
+            const totalGuruOverallDisplay = document.getElementById('totalGuruOverallDisplay');
+
+            const refreshBtn = document.getElementById('refreshBtn');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const resetBtnForm = document.getElementById('resetBtnForm');
+            const berkasEmis = document.getElementById('berkasEmis');
+            const fileNameDisplay = document.getElementById('fileNameDisplay');
+            const fileUploadText = document.getElementById('fileUploadText');
+            const tahunSemesterSelect = document.getElementById('tahunSemester');
+
+            // Modal Elements
+            const customModal = document.getElementById('customModal');
+            const modalTitle = document.getElementById('modalTitle');
+            const modalMessage = document.getElementById('modalMessage');
+            const modalActions = document.getElementById('modalActions');
+
+
+            // --- UTILITY FUNCTIONS ---
+
+            /**
+             * Populates the Tahun/Semester select dropdown with options from 2024 to 2030,
+             * including both Genap (Even) and Ganjil (Odd) semesters.
+             */
+            const populateTahunSemester = () => {
+                const startYear = 2024;
+                const endYear = 2030;
+                for (let year = startYear; year <= endYear; year++) {
+                    const optionGenap = document.createElement('option');
+                    optionGenap.value = `${year}-Genap`;
+                    optionGenap.textContent = `${year} - Semester Genap (Januari-Juni)`;
+                    tahunSemesterSelect.appendChild(optionGenap);
+                    const optionGanjil = document.createElement('option');
+                    optionGanjil.value = `${year}-Ganjil`;
+                    optionGanjil.textContent = `${year} - Semester Ganjil (Juli-Desember)`;
+                    tahunSemesterSelect.appendChild(optionGanjil);
+                }
+            };
+            
+            /**
+             * Displays a custom modal with a given title, message, and array of buttons.
+             * @param {string} title - The title of the modal.
+             * @param {string} message - The message content of the modal (can contain HTML).
+             * @param {Array<Object>} buttons - An array of button objects {text: string, class: string, action: function}.
+             */
+            const showModal = (title, message, buttons) => {
+                modalTitle.textContent = title;
+                modalMessage.innerHTML = message;
+                modalActions.innerHTML = ''; // Clear previous buttons
+                
+                buttons.forEach(btn => {
+                    const buttonEl = document.createElement('button');
+                    buttonEl.textContent = btn.text;
+                    buttonEl.className = btn.class;
+                    buttonEl.onclick = () => {
+                        hideModal(); // Hide modal when button is clicked
+                        if(btn.action) btn.action(); // Execute action if provided
+                    };
+                    modalActions.appendChild(buttonEl);
+                });
+
+                customModal.classList.add('active'); // Activate the modal backdrop
+            };
+
+            /**
+             * Hides the custom modal.
+             */
+            const hideModal = () => {
+                customModal.classList.remove('active'); // Deactivate the modal backdrop
+            };
+
+            /**
+             * Shows an alert modal with an OK button.
+             * @param {string} title - The title of the alert.
+             * @param {string} message - The message of the alert.
+             */
+            const showAlert = (title, message) => {
+                showModal(title, message, [
+                    { text: 'OK', class: 'bg-blue-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-blue-700 transition' }
+                ]);
+            };
+
+            /**
+             * Shows a confirmation modal with Cancel and Confirm buttons.
+             * @param {string} title - The title of the confirmation.
+             * @param {string} message - The message of the confirmation.
+             * @param {Function} onConfirm - The callback function to execute if confirmed.
+             */
+            const showConfirm = (title, message, onConfirm) => {
+                showModal(title, message, [
+                    { text: 'Batal', class: 'bg-gray-200 text-gray-700 font-bold py-2 px-6 rounded-lg hover:bg-gray-300 transition' },
+                    { text: 'Hapus', class: 'bg-red-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-red-700 transition', action: onConfirm }
+                ]);
+            };
+
+
+            // --- CORE LOGIC ---
+
+            /**
+             * Calculates the total number of students (santri) and updates the corresponding input field.
+             */
+            const calculateTotalSantri = () => {
+                const laki = parseInt(santriLaki.value) || 0;
+                const perempuan = parseInt(santriPerempuan.value) || 0;
+                totalSantri.value = laki + perempuan;
+            };
+            
+            /**
+             * Calculates the total number of teachers (guru) and updates the corresponding input field.
+             */
+            const calculateTotalGuru = () => {
+                const laki = parseInt(guruLaki.value) || 0;
+                const perempuan = parseInt(guruPerempuan.value) || 0;
+                totalGuru.value = laki + perempuan;
+            };
+
+            /**
+             * Updates the overall statistics displayed in the dedicated information cards.
+             */
+            const updateOverallStatistics = () => {
+                if (emisData.length === 0) {
+                    totalLembagaDisplay.textContent = '0';
+                    totalSantriOverallDisplay.textContent = '0';
+                    totalGuruOverallDisplay.textContent = '0';
+                    return;
+                }
+                // Calculate unique lembaga names
+                const totalLembaga = new Set(emisData.map(item => item.lembaga.toLowerCase().trim())).size;
+                const totalSantriAll = emisData.reduce((sum, item) => sum + parseInt(item.total), 0);
+                const totalGuruAll = emisData.reduce((sum, item) => sum + parseInt(item.totalGuru), 0);
+                
+                totalLembagaDisplay.textContent = totalLembaga;
+                totalSantriOverallDisplay.textContent = totalSantriAll;
+                totalGuruOverallDisplay.textContent = totalGuruAll;
+            };
+
+            /**
+             * Renders the data from `emisData` into the data container, creating cards for each entry.
+             * Also updates the overall statistics and visibility of the "no data" placeholder.
+             */
+            const renderData = () => {
+                dataContainer.innerHTML = ''; // Clear existing cards
+                if (emisData.length === 0) {
+                    noDataPlaceholder.classList.remove('hidden');
+                } else {
+                    noDataPlaceholder.classList.add('hidden');
+                    // Sort data by ID in descending order to show newest first
+                    const sortedData = [...emisData].sort((a, b) => b.id - a.id);
+                    sortedData.forEach(data => {
+                        const card = document.createElement('div');
+                        card.className = "bg-white p-5 rounded-xl shadow-md transition-all hover:shadow-lg";
+                        card.innerHTML = `
+                            <div class="flex flex-col md:flex-row justify-between md:items-start">
+                                <!-- Info Lembaga -->
+                                <div class="flex-1 mb-4 md:mb-0">
+                                    <p class="text-xs text-blue-500 font-semibold">${data.tahunSemester.replace('-', ' / Semester ')}</p>
+                                    <h3 class="text-xl font-bold text-gray-800">${data.lembaga}</h3>
+                                    <p class="text-xs text-gray-400 mt-2"><i class="fas fa-file-alt mr-1"></i> ${data.berkasName}</p>
+                                </div>
+                                <!-- Action Buttons -->
+                                <div class="flex items-center space-x-2">
+                                    ${data.berkasType === 'application/pdf' ? `<button class="view-btn action-btn" data-id="${data.id}" title="Lihat Berkas"><i class="fas fa-eye"></i></button>` : ''}
+                                    <button class="download-file-btn action-btn" data-id="${data.id}" title="Unduh Berkas"><i class="fas fa-download"></i></button>
+                                    <button class="delete-btn action-btn" data-id="${data.id}" title="Hapus Data"><i class="fas fa-trash"></i></button>
+                                </div>
+                            </div>
+                            
+                            <!-- Data Santri & Guru -->
+                             <div class="mt-4 border-t border-gray-100 pt-4 space-y-4">
+                                <!-- Jumlah Santri -->
+                                <div>
+                                    <p class="text-sm font-semibold text-gray-600 mb-2"><i class="fas fa-child mr-2"></i>Jumlah Santri</p> <!-- Updated text -->
+                                    <div class="grid grid-cols-3 gap-4 text-center">
+                                        <div>
+                                            <p class="text-sm text-gray-500">Laki-laki</p>
+                                            <p class="text-2xl font-bold text-blue-600">${data.santriL}</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-gray-500">Perempuan</p>
+                                            <p class="text-2xl font-bold text-pink-500">${data.santriP}</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-gray-500">Total</p>
+                                            <p class="text-3xl font-bold text-green-600">${data.total}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                 <!-- Jumlah Guru -->
+                                <div>
+                                    <p class="text-sm font-semibold text-gray-600 mb-2"><i class="fas fa-chalkboard-teacher mr-2"></i>Jumlah Guru</p> <!-- Updated text -->
+                                    <div class="grid grid-cols-3 gap-4 text-center">
+                                        <div>
+                                            <p class="text-sm text-gray-500">Laki-laki</p>
+                                            <p class="text-2xl font-bold text-blue-600">${data.guruL || 0}</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-gray-500">Perempuan</p>
+                                            <p class="text-2xl font-bold text-pink-500">${data.guruP || 0}</p>
+                                        </div>
+                                        <div>
+                                            <p class="text-sm text-gray-500">Total</p>
+                                            <p class="text-3xl font-bold text-green-600">${data.totalGuru || 0}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                             </div>
+                        `;
+                        // Apply consistent styling to action buttons within cards
+                        card.querySelectorAll('.action-btn').forEach(btn => {
+                            btn.classList.add('h-10', 'w-10', 'rounded-full', 'text-white', 'flex', 'items-center', 'justify-center', 'transition', 'hover:opacity-80');
+                            if (btn.classList.contains('view-btn')) btn.classList.add('bg-indigo-500');
+                            if (btn.classList.contains('download-file-btn')) btn.classList.add('bg-blue-500');
+                            if (btn.classList.contains('delete-btn')) btn.classList.add('bg-red-500');
+                        });
+                        dataContainer.appendChild(card);
+                    });
+                }
+                updateOverallStatistics(); // Update statistics after rendering data
+            };
+
+            /**
+             * Saves the current `emisData` array to localStorage.
+             */
+            const saveData = () => {
+                localStorage.setItem('emisData', JSON.stringify(emisData));
+            };
+            
+            /**
+             * Clears the file input field and resets its associated display texts.
+             */
+            const clearFileInput = () => {
+                berkasEmis.value = ''; // Clear the file input
+                fileNameDisplay.textContent = ''; // Clear file name display
+                fileUploadText.innerHTML = '<span class="font-semibold text-blue-600">Klik untuk upload</span>'; // Reset upload text
+            };
+
+            /**
+             * Handles the form submission event. Validates inputs, reads the file,
+             * adds new data to `emisData`, saves, re-renders, and resets the form.
+             * @param {Event} e - The form submit event.
+             */
+            const handleFormSubmit = (e) => {
+                e.preventDefault();
+
+                const berkasFile = document.getElementById('berkasEmis').files[0];
+                if (!berkasFile) {
+                    showAlert('Error Validasi', 'Silakan pilih file berkas EMIS terlebih dahulu.');
+                    return;
+                }
+                if (berkasFile.size > 5 * 1024 * 1024) { // 5MB limit
+                    showAlert('Error File', 'Ukuran file terlalu besar. Ukuran maksimal adalah 5MB.');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const newData = {
+                        id: currentId++,
+                        lembaga: document.getElementById('lembagaName').value,
+                        tahunSemester: document.getElementById('tahunSemester').value,
+                        santriL: santriLaki.value,
+                        santriP: santriPerempuan.value,
+                        total: totalSantri.value,
+                        guruL: guruLaki.value,
+                        guruP: guruPerempuan.value,
+                        totalGuru: totalGuru.value,
+                        berkasName: berkasFile.name,
+                        berkasType: berkasFile.type,
+                        berkasData: event.target.result.split(',')[1] // Store only the base64 part
+                    };
+                    
+                    emisData.push(newData);
+                    saveData();
+                    renderData();
+                    emisForm.reset(); // Reset form fields
+                    calculateTotalSantri(); // Recalculate totals after reset
+                    calculateTotalGuru();
+                    clearFileInput(); // Clear file input display
+                    showAlert('Sukses!', `Data untuk lembaga <strong>${newData.lembaga}</strong> berhasil disimpan.`);
+                };
+                reader.readAsDataURL(berkasFile); // Read file as Data URL (base64)
+            };
+
+            /**
+             * Opens a new window to view PDF files. Other file types are not directly viewable.
+             * @param {number} id - The ID of the data entry to view its file.
+             */
+            const viewFile = (id) => {
+                const data = emisData.find(item => item.id === id);
+                if (!data) return;
+                
+                if (data.berkasType === 'application/pdf') {
+                    const pdfWindow = window.open("");
+                    pdfWindow.document.write(`<html><head><title>${data.berkasName}</title><style>body,html{margin:0;padding:0;overflow:hidden;}</style></head><body><iframe width="100%" height="100%" src="data:application/pdf;base64,${data.berkasData}"></iframe></body></html>`);
+                } else {
+                    showAlert('Info', 'Format file ini tidak dapat ditampilkan langsung. Silakan unduh berkas untuk melihatnya.');
+                }
+            };
+
+            /**
+             * Downloads an individual file associated with a data entry.
+             * @param {number} id - The ID of the data entry to download its file.
+             */
+            const downloadIndividualFile = (id) => {
+                const data = emisData.find(item => item.id === id);
+                if (!data) return;
+                
+                const link = document.createElement('a');
+                link.href = `data:${data.berkasType};base64,${data.berkasData}`;
+                link.download = data.berkasName; // Set download file name
+                document.body.appendChild(link);
+                link.click(); // Programmatically click the link to trigger download
+                document.body.removeChild(link); // Clean up the link element
+            };
+
+            /**
+             * Deletes a data entry after user confirmation.
+             * @param {number} id - The ID of the data entry to delete.
+             */
+            const deleteData = (id) => {
+                const itemToDelete = emisData.find(item => item.id === id);
+                if (!itemToDelete) return;
+
+                showConfirm('Konfirmasi Hapus', `Apakah Anda yakin ingin menghapus data untuk <strong>${itemToDelete.lembaga}</strong>?`, () => {
+                    emisData = emisData.filter(item => item.id !== id); // Filter out the deleted item
+                    saveData(); // Save updated data
+                    renderData(); // Re-render the display
+                    showAlert('Terhapus!', 'Data telah berhasil dihapus.');
+                });
+            };
+
+            /**
+             * Exports all current EMIS data to an Excel file using SheetJS.
+             */
+            const downloadExcel = () => {
+                if (emisData.length === 0) {
+                    showAlert('Tidak Ada Data', 'Tidak ada data yang bisa diunduh.');
+                    return;
+                }
+
+                // Format data for worksheet
+                const dataForSheet = emisData.map(item => ({
+                    'Nama Lembaga': item.lembaga,
+                    'Periode Laporan': item.tahunSemester,
+                    'Santri Laki-laki': parseInt(item.santriL),
+                    'Santri Perempuan': parseInt(item.santriP),
+                    'Total Santri': parseInt(item.total),
+                    'Guru Laki-laki': parseInt(item.guruL),
+                    'Guru Perempuan': parseInt(item.guruP),
+                    'Total Guru': parseInt(item.totalGuru),
+                    'Nama Berkas Terlampir': item.berkasName
+                }));
+
+                // Create worksheet and workbook
+                const worksheet = XLSX.utils.json_to_sheet(dataForSheet);
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, "Data EMIS TPQ");
+
+                // Set column widths for better readability in Excel
+                worksheet['!cols'] = [
+                    { wch: 35 }, // Nama Lembaga
+                    { wch: 25 }, // Periode Laporan
+                    { wch: 15 }, // Santri L
+                    { wch: 15 }, // Santri P
+                    { wch: 15 }, // Total Santri
+                    { wch: 15 }, // Guru L
+                    { wch: 15 }, // Guru P
+                    { wch: 15 }, // Total Guru
+                    { wch: 35 }  // Nama Berkas
+                ];
+
+                // Generate and trigger Excel file download
+                const today = new Date().toISOString().slice(0, 10);
+                XLSX.writeFile(workbook, `Data_EMIS_TPQ_All_${today}.xlsx`);
+            };
+            
+            // --- EVENT LISTENERS ---
+
+            // Listen for input changes on santri and guru numbers to auto-calculate totals
+            santriLaki.addEventListener('input', calculateTotalSantri);
+            santriPerempuan.addEventListener('input', calculateTotalSantri);
+            guruLaki.addEventListener('input', calculateTotalGuru);
+            guruPerempuan.addEventListener('input', calculateTotalGuru);
+            
+            // Form submission handler
+            emisForm.addEventListener('submit', handleFormSubmit);
+            
+            // Event delegation for action buttons on data cards (view, download, delete)
+            dataContainer.addEventListener('click', (e) => {
+                const targetButton = e.target.closest('button'); // Find the closest button ancestor
+                if (!targetButton) return; // If no button was clicked, exit
+
+                const id = parseInt(targetButton.getAttribute('data-id')); // Get data-id attribute
+                if (targetButton.classList.contains('view-btn')) viewFile(id);
+                if (targetButton.classList.contains('download-file-btn')) downloadIndividualFile(id);
+                if (targetButton.classList.contains('delete-btn')) deleteData(id);
+            });
+
+            // Refresh button handler
+            refreshBtn.addEventListener('click', () => {
+                emisData = JSON.parse(localStorage.getItem('emisData')) || []; // Reload data from localStorage
+                renderData(); // Re-render display
+                // Add a temporary spin animation to the icon
+                const icon = refreshBtn.querySelector('i');
+                icon.classList.add('animate-spin');
+                setTimeout(() => icon.classList.remove('animate-spin'), 1000);
+            });
+            
+            // Download All Data button handler
+            downloadBtn.addEventListener('click', downloadExcel);
+            
+            // File input change handler to display selected file name
+            berkasEmis.addEventListener('change', () => {
+                if (berkasEmis.files.length > 0) {
+                    fileNameDisplay.textContent = berkasEmis.files[0].name;
+                    fileUploadText.innerHTML = '<span class="font-semibold text-green-600">File terpilih!</span>';
+                } else {
+                    clearFileInput(); // If no file selected, reset display
+                }
+            });
+            
+            // Form reset button handler to also clear file input and recalculate totals
+            resetBtnForm.addEventListener('click', () => {
+                // Use a small timeout to ensure the form reset happens first
+                setTimeout(() => {
+                    calculateTotalSantri();
+                    calculateTotalGuru();
+                    clearFileInput();
+                }, 0);
+            });
+
+            // --- INITIALIZATION ---
+            populateTahunSemester(); // Populate semester dropdown
+            calculateTotalSantri(); // Initial calculation of santri total
+            calculateTotalGuru();   // Initial calculation of guru total
+            renderData();           // Initial rendering of stored data
+        });
+    </script>
+
+</body>
+</html>
